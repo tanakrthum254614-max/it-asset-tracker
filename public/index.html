@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>IT Asset Tracker</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💻</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    td .sub { font-size: 12px; color: var(--muted); }
+    td.tag { font-family: ui-monospace, Consolas, monospace; font-weight: 600; white-space: nowrap; }
+    td.actions { white-space: nowrap; text-align: right; }
+    td.check, th.check { width: 36px; }
+    td.check input, th.check input { width: 16px; height: 16px; }
+    .warn-text { color: var(--warn); } .danger-text { color: var(--danger); }
+    .selbar { display: none; gap: 8px; align-items: center; padding: 8px 12px; margin-bottom: 12px; }
+    .selbar.show { display: flex; flex-wrap: wrap; }
+    @media (max-width: 760px) {
+      thead { display: none; }
+      tr { display: grid; grid-template-columns: 36px 1fr; border-bottom: 1px solid var(--border); padding: 8px 0; }
+      td { border: 0; padding: 2px 8px; }
+      td.check { grid-row: span 6; }
+      td.actions { text-align: left; }
+    }
+  </style>
+</head>
+<body>
+  <header class="top">
+    <div class="wrap">
+      <h1>💻 <span id="org">IT Asset</span> <small>ทะเบียนอุปกรณ์ IT</small></h1>
+      <button id="btnImport">⬆ นำเข้า CSV</button>
+      <button id="btnExport">⬇ ส่งออก CSV</button>
+      <button class="primary" id="btnAdd">＋ เพิ่มอุปกรณ์</button>
+    </div>
+  </header>
+
+  <main class="wrap">
+    <div class="stats" id="stats"></div>
+    <div class="toolbar">
+      <input type="search" id="q" placeholder="ค้นหารหัส, รุ่น, serial, ผู้ถือ, แผนก…">
+      <select id="fCat"><option value="">ทุกประเภท</option></select>
+      <select id="fStatus"><option value="">ทุกสถานะ</option></select>
+    </div>
+    <div class="card selbar" id="selbar">
+      <span id="selCount"></span>
+      <button class="primary" id="btnLabels">🏷️ พิมพ์ป้าย QR</button>
+      <button id="btnClearSel">ยกเลิกที่เลือก</button>
+    </div>
+    <div class="card table-scroll">
+      <table>
+        <thead><tr>
+          <th class="check"><input type="checkbox" id="selAll" aria-label="เลือกทั้งหมด"></th>
+          <th>รหัส</th><th>อุปกรณ์</th><th>ผู้ถือ / แผนก</th><th>สถานะ</th><th>ประกัน</th><th></th>
+        </tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+  </main>
+
+  <dialog id="dlg">
+    <form method="dialog" id="form">
+      <h2 id="dlgTitle">เพิ่มอุปกรณ์</h2>
+      <input type="hidden" name="id">
+      <div class="grid2">
+        <label>รหัสทรัพย์สิน<input name="tag" placeholder="เว้นว่าง = สร้างให้ (IT-0001)"></label>
+        <label>ประเภท<select name="category"></select></label>
+      </div>
+      <label>ชื่อ / รุ่น<input name="name" required placeholder="เช่น Dell Latitude 5440"></label>
+      <div class="grid2">
+        <label>Serial number<input name="serial"></label>
+        <label>สถานะ<select name="status"></select></label>
+        <label>ผู้ถือ<input name="assignee" placeholder="เว้นว่างถ้ายังไม่มีคนใช้"></label>
+        <label>แผนก<input name="department" list="depts"><datalist id="depts"></datalist></label>
+        <label>ตำแหน่ง/สถานที่<input name="location" placeholder="เช่น ชั้น 3 ห้องบัญชี"></label>
+        <label>ราคา (บาท)<input name="price" inputmode="decimal"></label>
+        <label>วันที่ซื้อ<input type="date" name="purchaseDate"></label>
+        <label>ประกันหมด<input type="date" name="warrantyUntil"></label>
+      </div>
+      <label>หมายเหตุ<textarea name="note" rows="2" style="min-height:60px"></textarea></label>
+      <label>บันทึกลงประวัติ (ถ้ามี)<input name="logNote" placeholder="เช่น เปลี่ยนแบตเตอรี่, ลงโปรแกรมใหม่"></label>
+      <div class="actions">
+        <button value="cancel" formnovalidate>ยกเลิก</button>
+        <button class="primary" value="save">บันทึก</button>
+      </div>
+    </form>
+  </dialog>
+
+  <dialog id="dlgImport">
+    <form method="dialog" id="formImport">
+      <h2>นำเข้าจาก CSV / Excel</h2>
+      <p class="hint">ใน Excel ให้กด Save As → CSV UTF-8 แถวแรกต้องเป็นหัวคอลัมน์
+        ถ้ารหัสทรัพย์สิน (tag) ซ้ำกับของเดิม ระบบจะอัปเดตรายการนั้นแทนการเพิ่มใหม่
+        <a href="#" id="dlTemplate">ดาวน์โหลดไฟล์ตัวอย่าง</a></p>
+      <label>เลือกไฟล์<input type="file" id="csvFile" accept=".csv,text/csv"></label>
+      <div id="importPreview" class="hint"></div>
+      <div class="actions">
+        <button value="cancel" formnovalidate>ยกเลิก</button>
+        <button class="primary" value="import" id="btnDoImport" disabled>นำเข้า</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="module" src="app.js"></script>
+</body>
+</html>

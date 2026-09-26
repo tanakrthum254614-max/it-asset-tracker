@@ -1,0 +1,13 @@
+{
+  "name": "it-asset-tracker",
+  "private": true,
+  "type": "module",
+  "description": "IT Asset Tracker: ทะเบียนอุปกรณ์ IT ติด QR สแกนแล้วรู้ว่าใครถือ ประกันหมดเมื่อไหร่ พร้อมประวัติการส่งมอบ",
+  "scripts": {
+    "dev": "node --env-file-if-exists=.env dev.js"
+  },
+  "dependencies": {
+    "@upstash/redis": "^1.35.0",
+    "qrcode": "^1.5.4"
+  }
+}

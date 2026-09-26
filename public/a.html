@@ -1,0 +1,105 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>ข้อมูลอุปกรณ์</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>💻</text></svg>">
+  <link rel="stylesheet" href="style.css">
+  <style>
+    main { max-width: 520px; margin: 0 auto; padding: 24px 16px 64px; }
+    .card { padding: 20px; }
+    .tag { font-family: ui-monospace, Consolas, monospace; font-size: 14px; color: var(--muted); }
+    h1 { font-size: 22px; margin: 4px 0 12px; }
+    dl { display: grid; grid-template-columns: 110px 1fr; gap: 8px 12px; margin: 16px 0 0; }
+    dt { color: var(--muted); font-size: 14px; }
+    dd { margin: 0; }
+    .quick { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 20px; }
+    .history { margin-top: 20px; }
+    .history h2 { font-size: 15px; margin: 0 0 8px; }
+    .history li { font-size: 14px; padding: 6px 0; border-top: 1px solid var(--border); list-style: none; }
+    .history ul { padding: 0; margin: 0; }
+    .history time { color: var(--muted); font-size: 12px; display: block; }
+  </style>
+</head>
+<body>
+  <main id="view"><p class="empty">กำลังโหลด…</p></main>
+  <script type="module">
+    import { api, esc, fmtDate, toast } from './common.js';
+
+    const view = document.getElementById('view');
+    const tag = new URLSearchParams(location.search).get('tag') || '';
+    const STATUS_CLS = { in_use: 'ok', spare: '', repair: 'warn', retired: 'danger' };
+
+    async function load() {
+      const [cfg, res] = await Promise.all([
+        fetch('/api/config').then((r) => r.json()),
+        // ไม่ถามรหัส: คนทั่วไปที่สแกนจะเห็นข้อมูลแบบย่อ
+        fetch(`/api/assets?tag=${encodeURIComponent(tag)}`, {
+          headers: { 'x-admin-key': (() => { try { return localStorage.getItem('adminKey') || ''; } catch { return ''; } })() },
+        }).then(async (r) => ({ ok: r.ok, ...(await r.json()) })),
+      ]);
+      if (!res.ok) { view.innerHTML = `<div class="card empty">${esc(res.error)}</div>`; return; }
+      render(cfg, res.asset, res.admin);
+    }
+
+    function render(cfg, a, admin) {
+      document.title = `${a.tag} · ${a.name}`;
+      const row = (k, v) => v ? `<dt>${k}</dt><dd>${v}</dd>` : '';
+      const w = a.warrantyUntil ? Math.floor((new Date(a.warrantyUntil) - Date.now()) / 86400000) : null;
+      const ticket = cfg.ticketUrl
+        ? `<a class="btn primary" target="_blank" rel="noopener" href="${esc(cfg.ticketUrl)}">📨 แจ้งปัญหาเครื่องนี้</a>` : '';
+      view.innerHTML = `
+        <div class="card">
+          <div class="tag">${esc(a.tag)}</div>
+          <h1>${esc(a.name)}</h1>
+          <span class="badge ${STATUS_CLS[a.status]}">${esc(cfg.status[a.status])}</span>
+          <dl>
+            ${row('ประเภท', esc(cfg.category[a.category]))}
+            ${row('ผู้ถือ', esc(a.assignee))}
+            ${row('แผนก', esc(a.department))}
+            ${row('สถานที่', esc(a.location))}
+            ${row('ประกันถึง', a.warrantyUntil ? `${fmtDate(a.warrantyUntil)} ${w < 0 ? '<span class="badge danger">หมดแล้ว</span>' : ''}` : '')}
+            ${admin ? row('Serial', esc(a.serial)) + row('วันที่ซื้อ', a.purchaseDate && fmtDate(a.purchaseDate))
+              + row('ราคา', a.price !== '' && a.price != null ? `${Number(a.price).toLocaleString('th-TH')} บาท` : '') + row('หมายเหตุ', esc(a.note)) : ''}
+          </dl>
+          <div class="quick">
+            ${ticket}
+            ${admin ? `
+              <button id="qAssign">👤 ส่งมอบ/เปลี่ยนผู้ถือ</button>
+              <button id="qReturn" ${a.assignee ? '' : 'hidden'}>↩ รับคืน</button>
+              <button id="qRepair">🔧 ${a.status === 'repair' ? 'ซ่อมเสร็จ' : 'ส่งซ่อม'}</button>
+              <a class="btn" href="/">📋 ทะเบียนทั้งหมด</a>` : ''}
+          </div>
+          ${admin && a.history?.length ? `<div class="history"><h2>ประวัติ</h2><ul>
+            ${a.history.map((h) => `<li><time>${new Date(h.at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short' })}</time>${esc(h.text)}</li>`).join('')}
+          </ul></div>` : ''}
+        </div>`;
+      if (admin) wire(a);
+    }
+
+    // ปุ่มลัดสำหรับแอดมินที่เดินสแกนหน้างาน
+    function wire(a) {
+      const save = async (patch, msg) => {
+        try { await api('/api/assets', { method: 'POST', body: { ...a, ...patch } }); toast(msg); load(); }
+        catch (e) { toast(e.message, true); }
+      };
+      document.getElementById('qAssign').onclick = () => {
+        const who = prompt('ส่งมอบให้ใคร?', a.assignee || '');
+        if (who === null || !who.trim()) return;
+        const dept = prompt('แผนก', a.department || '') ?? a.department;
+        save({ assignee: who.trim(), department: dept, status: 'in_use' }, `ส่งมอบให้ ${who.trim()} แล้ว`);
+      };
+      document.getElementById('qReturn').onclick = () =>
+        confirm(`รับคืนเครื่องจาก ${a.assignee}?`) && save({ assignee: '', status: 'spare' }, 'รับคืนแล้ว');
+      document.getElementById('qRepair').onclick = () => {
+        if (a.status === 'repair') return save({ status: a.assignee ? 'in_use' : 'spare', logNote: 'ซ่อมเสร็จ' }, 'บันทึกว่าซ่อมเสร็จแล้ว');
+        const why = prompt('อาการ/สาเหตุที่ส่งซ่อม');
+        if (why !== null) save({ status: 'repair', logNote: why ? `ส่งซ่อม: ${why}` : '' }, 'บันทึกส่งซ่อมแล้ว');
+      };
+    }
+
+    load().catch((e) => toast(e.message, true));
+  </script>
+</body>
+</html>

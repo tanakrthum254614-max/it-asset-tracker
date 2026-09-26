@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>พิมพ์ป้าย QR</title>
+  <link rel="stylesheet" href="style.css">
+  <style>
+    .bar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 16px 0; }
+    .sheet { display: grid; grid-template-columns: repeat(auto-fill, minmax(62mm, 1fr)); gap: 4mm; }
+    /* ป้ายขนาดประมาณ 62 x 30 มม. พิมพ์บนสติกเกอร์ A4 แล้วตัดได้ */
+    .label {
+      display: flex; gap: 3mm; align-items: center; padding: 2.5mm; height: 30mm;
+      border: 1px dashed #999; border-radius: 2mm; background: #fff; color: #000; break-inside: avoid;
+    }
+    .label img { width: 25mm; height: 25mm; flex: none; }
+    .label .t { font: 700 13pt ui-monospace, Consolas, monospace; }
+    .label .n { font-size: 8.5pt; line-height: 1.3; }
+    .label .o { font-size: 7pt; color: #444; margin-top: 1mm; }
+    @media print {
+      @page { size: A4; margin: 8mm; }
+      body { background: #fff; }
+      .bar { display: none; }
+      .wrap { max-width: none; padding: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <button class="primary" onclick="print()">🖨️ พิมพ์</button>
+      <label style="margin:0;display:flex;gap:6px;align-items:center;color:var(--text)">
+        <input type="checkbox" id="showName" checked style="width:auto"> แสดงชื่อรุ่น
+      </label>
+      <span class="hint">แนะนำให้พิมพ์บนกระดาษสติกเกอร์ A4 แล้วตัดตามเส้นประ</span>
+    </div>
+    <div class="sheet" id="sheet"></div>
+  </div>
+  <script type="module">
+    import { api, esc } from './common.js';
+
+    const tags = (new URLSearchParams(location.search).get('tags') || '').split(',').filter(Boolean);
+    const [{ assets }, cfg] = await Promise.all([api('/api/assets'), fetch('/api/config').then((r) => r.json())]);
+    const list = tags.map((t) => assets.find((a) => a.tag === t)).filter(Boolean);
+    const sheet = document.getElementById('sheet');
+    const render = () => {
+      const showName = document.getElementById('showName').checked;
+      sheet.innerHTML = list.map((a) => `
+        <div class="label">
+          <img src="/api/qr?tag=${encodeURIComponent(a.tag)}" alt="">
+          <div>
+            <div class="t">${esc(a.tag)}</div>
+            ${showName ? `<div class="n">${esc(a.name)}</div>` : ''}
+            <div class="o">${esc(cfg.orgName)} · สแกนเพื่อดูข้อมูล/แจ้งปัญหา</div>
+          </div>
+        </div>`).join('') || '<p class="empty">ไม่พบรายการที่เลือก</p>';
+    };
+    document.getElementById('showName').onchange = render;
+    render();
+  </script>
+</body>
+</html>
