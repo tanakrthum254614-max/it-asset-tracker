@@ -1,4 +1,20 @@
-# 💻 IT Asset Tracker
+<div align="center">
+
+<img src="docs/banner.svg" alt="IT Asset Tracker" width="100%">
+
+<br>
+
+<img src="https://img.shields.io/badge/Node.js-20%2B-3c873a?logo=nodedotjs&logoColor=white" alt="Node.js"> <img src="https://img.shields.io/badge/Vercel-serverless-000?logo=vercel&logoColor=white" alt="Vercel"> <img src="https://img.shields.io/badge/Upstash-Redis-00e9a3?logo=upstash&logoColor=white" alt="Upstash"> <img src="https://img.shields.io/badge/UI-Thai-d4af5f?labelColor=0a0a0c" alt="Thai UI">
+
+</div>
+
+<table>
+<tr>
+<td width="72%"><img src="docs/screenshot.png" alt="IT Asset Tracker — desktop"></td>
+<td width="28%"><img src="docs/screenshot-phone.png" alt="IT Asset Tracker — mobile"></td>
+</tr>
+<tr><td align="center"><sub>คอมพิวเตอร์ (ข้อมูลตัวอย่าง)</sub></td><td align="center"><sub>มือถือ</sub></td></tr>
+</table>
 
 ทะเบียนอุปกรณ์ IT แทนไฟล์ Excel ติด QR ไว้ที่เครื่อง สแกนแล้วรู้ทันทีว่าใครถือ อยู่ที่ไหน และประกันหมดเมื่อไหร่
 
@@ -26,3 +42,7 @@ npm run dev            # http://localhost:3000
 4. พิมพ์ป้าย QR **หลัง deploy แล้ว** เพราะ QR จะชี้ไปที่โดเมนที่ใช้เปิดหน้าพิมพ์
 
 > ใช้ร่วมกับ [it-expiry-alert](../it-expiry-alert) ได้ เช่นเอาวันประกันหมดของเครื่องสำคัญไปตั้งแจ้งเตือน
+
+---
+
+<div align="center"><sub>ชุดเครื่องมือ IT เดียวกัน: [🛠️ IT Runbook](https://github.com/tanakrthum254614-max/it-runbook) · [⏰ IT Expiry Alert](https://github.com/tanakrthum254614-max/it-expiry-alert) · โดย <a href="https://github.com/tanakrthum254614-max">tanakrthum254614-max</a> 🇹🇭</sub></div>
